@@ -38,6 +38,10 @@ private:
     vector<float> currentAngle;     // current angle of all harmonics
     vector<float> angleChange;      // angular speed of all harmonics
 
+
+    ADSR adsr;                      // envelope
+    ADSR::Parameters adsrParams;    // envelope parameters
+
     double Fs = 48000;
     float nyquist = Fs / 2.f;
 
