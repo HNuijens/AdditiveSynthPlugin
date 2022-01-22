@@ -10,10 +10,20 @@
 
 #include "SynthVoice.h"
 
-SynthVoice::SynthVoice(double Fs, int numHarmonics)
+SynthVoice::SynthVoice()
 {
-    this->Fs = Fs; 
-    this->numHarmonics = numHarmonics; 
+
+}
+
+SynthVoice::~SynthVoice()
+{
+
+}
+
+void SynthVoice::setup(double Fs, int numHarmonics)
+{
+    this->Fs = Fs;
+    this->numHarmonics = numHarmonics;
 
     nyquist = Fs / 2.f;
 
@@ -33,15 +43,10 @@ SynthVoice::SynthVoice(double Fs, int numHarmonics)
     adsr.setSampleRate(Fs);
     adsr.setParameters({ 0.5f,0.5f,1.0f,0.5f });
 
-    ComputeAverageGain();
+    computeAverageGain();
 }
 
-SynthVoice::~SynthVoice()
-{
-
-}
-
-double SynthVoice::GetNextSample()
+double SynthVoice::getNextSample()
 {
     double out = 0.f;
 
@@ -59,17 +64,17 @@ double SynthVoice::GetNextSample()
         }
     }
 
-    return out; 
+    return out * averagedGain; 
 }
 
-void SynthVoice::SetHarmonicGain(vector<double>gainVector)
+void SynthVoice::setHarmonicGain(vector<double>gainVector)
 {
     this->gainVector = gainVector;
 
-    ComputeAverageGain();
+    computeAverageGain();
 }
 
-void SynthVoice::ComputeAverageGain()
+void SynthVoice::computeAverageGain()
 {
     double totalGain = 0.f;
     for (int h = 0; h < numHarmonics; h++)
@@ -82,22 +87,24 @@ void SynthVoice::ComputeAverageGain()
     averagedGain =  1.f / totalGain;
 }
 
-void SynthVoice::SetADSRParams(ADSR::Parameters params)
+void SynthVoice::setADSRParams(ADSR::Parameters params)
 {
     adsr.setParameters(params);
 }
 
-void SynthVoice::NoteOn()
+void SynthVoice::noteOn(double f0)
 {
+    this->f0 = f0;
+    setAngleChange();
     adsr.noteOn();
 }
 
-void SynthVoice::NoteOff()
+void SynthVoice::noteOff()
 {
     adsr.noteOff();
 }
 
-void SynthVoice::SetAngleChange()
+void SynthVoice::setAngleChange()
 {
     for (int h = 0; h < numHarmonics; h++)
     {

@@ -13,7 +13,7 @@
 AdditiveSynthPluginAudioProcessorEditor::AdditiveSynthPluginAudioProcessorEditor(AdditiveSynthPluginAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    for (int h = 0; h < audioProcessor.nHarmonics; h++)
+    for (int h = 0; h < audioProcessor.numHarmonics; h++)
     {
         gainSliders.add(new Slider());
         harmonicLabels.add(new Label());
@@ -24,13 +24,13 @@ AdditiveSynthPluginAudioProcessorEditor::AdditiveSynthPluginAudioProcessorEditor
         ADSRSliders.add(new Slider());
     }
 
-    for (int h = 0; h < audioProcessor.nHarmonics; h++)
+    for (int h = 0; h < audioProcessor.numHarmonics; h++)
     {
         gainSliders[h]->addListener(this);
         gainSliders[h]->setSliderStyle(Slider::SliderStyle::LinearBarVertical);
         gainSliders[h]->setTextBoxStyle(Slider::TextBoxBelow, true, 50, 30);
         gainSliders[h]->setRange(0.f, 1.f, 0.01f);
-        gainSliders[h]->setValue(audioProcessor.gain[h]);
+        gainSliders[h]->setValue(audioProcessor.gainVector[h]);
         //gainSliders[h]->setSliderSnapsToMousePosition(false);
         addAndMakeVisible(gainSliders[h]);
 
@@ -125,7 +125,7 @@ void AdditiveSynthPluginAudioProcessorEditor::paint(juce::Graphics& g)
      //auto modArea = topArea.removeFromTop(getHeight() / 2.f);
     auto topLabelArea = topArea.removeFromBottom(labelHeight);
     auto gainSliderArea = topArea.removeFromRight(5.f * getWidth() / 6.f);
-    auto sliderArea = gainSliderArea.getWidth() / audioProcessor.nHarmonics;
+    auto sliderArea = gainSliderArea.getWidth() / audioProcessor.numHarmonics;
     // g.drawRoundedRectangle(area.toFloat(), 10.f, 0.5f);
     modSlider.setBounds(topArea);
 
@@ -138,7 +138,7 @@ void AdditiveSynthPluginAudioProcessorEditor::paint(juce::Graphics& g)
 
     auto ADSRSliderArea = area.getWidth() / 4.f;
 
-    for (int h = 0; h < audioProcessor.nHarmonics; h++)
+    for (int h = 0; h < audioProcessor.numHarmonics; h++)
     {
         gainSliders[h]->setBounds(gainSliderArea.removeFromLeft(sliderArea));
     }
@@ -161,12 +161,13 @@ void AdditiveSynthPluginAudioProcessorEditor::resized()
 
 void AdditiveSynthPluginAudioProcessorEditor::sliderValueChanged(Slider* slider)
 {
-    for (int h = 0; h < audioProcessor.nHarmonics; h++)
+    for (int h = 0; h < audioProcessor.numHarmonics; h++)
     {
         if (slider == gainSliders[h])
         {
-            audioProcessor.gain[h] = gainSliders[h]->getValue();
-            audioProcessor.averageGain = audioProcessor.computeAverageGain(audioProcessor.gain, audioProcessor.nHarmonics);
+            audioProcessor.gainVector[h] = gainSliders[h]->getValue();
+            audioProcessor.setVoiceHarmonics();
+         
         }
     }
 
@@ -194,7 +195,7 @@ void AdditiveSynthPluginAudioProcessorEditor::sliderValueChanged(Slider* slider)
 
     if (slider == ADSRSliders[0] || slider == ADSRSliders[1] || slider == ADSRSliders[2] || slider == ADSRSliders[3])
     {
-        audioProcessor.adsr.setParameters({ attack,decay,sustain,release });
+        audioProcessor.setVoiceADSR(attack,decay,sustain,release);
     }
 
     if (slider == &volumeSlider)
@@ -205,7 +206,7 @@ void AdditiveSynthPluginAudioProcessorEditor::sliderValueChanged(Slider* slider)
     if (slider == &modSlider)
     {
         audioProcessor.cent = modSlider.getValue() * 100.f;
-        audioProcessor.setAngleChange();
+       // audioProcessor.setAngleChange();
     }
 
 }

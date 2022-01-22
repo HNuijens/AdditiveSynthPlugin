@@ -50,5 +50,6 @@ private:
 
     AdditiveSynthPluginAudioProcessor& audioProcessor;
 
+    vector<double> gainVector; 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AdditiveSynthPluginAudioProcessorEditor)
 };

@@ -18,38 +18,42 @@ using namespace std;
 class SynthVoice {
 
 public: 
-    SynthVoice(double Fs, int nHarmonics);
+    SynthVoice();
 
     ~SynthVoice();
 
-    void SetGain(vector<double>gainVector);
 
-    double GetNextSample();
+    void setup(double Fs, int numHarmonics);
+    void setHarmonicGain(vector<double>gainVector);
+    
+    double getNextSample();
 
-   
+    void setADSRParams(ADSR::Parameters params);
+    void noteOn(double f0);
+    void noteOff();
+
+    
+
+    double f0 = 220; 
 
 
 private:
 
-    void AverageGain();             // changing the gain when harmonics are altered
-
+    void computeAverageGain();      // changing the gain when harmonics are altered
+    void setAngleChange();          // changing the angular speed
 
     vector<double> gainVector;      // list containing gain for each harmonic
-    vector<float> currentAngle;     // current angle of all harmonics
-    vector<float> angleChange;      // angular speed of all harmonics
-
+    vector<double> currentAngle;     // current angle of all harmonics
+    vector<double> angleChange;      // angular speed of all harmonics
 
     ADSR adsr;                      // envelope
     ADSR::Parameters adsrParams;    // envelope parameters
 
-    double Fs = 48000;
-    float nyquist = Fs / 2.f;
+    double Fs = 48000;              // sampling rate
+    double nyquist = Fs / 2.f;      // fundam
+    double averagedGain;            // average out all sinusoids
 
+    double cent = 0;                // 
     int numHarmonics;               // number of harmonics
-
-   
-
-    
-
 
 };

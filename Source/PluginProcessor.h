@@ -11,6 +11,7 @@
 #include <JuceHeader.h>
 #include <cmath>
 #include <vector>
+#include "SynthVoice.h"
 using namespace std;
 
 //==============================================================================
@@ -59,26 +60,26 @@ public:
     float f0 = 440.f;
     float fs = 44100.f;
 
-    vector<float> gain;
+    vector<double> gainVector;
 
     float g = 1.f;
     float volume = 0.5f;
-    int nHarmonics = 16;
+    int numHarmonics = 16;
+    int numVoices = 6; 
     float cent = 0.f;
 
-    ADSR adsr;
-    ADSR::Parameters adsrParams;
-
-    float computeAverageGain(vector<float> gainList, float numberOfHarmonics);
-    void setAngleChange();
-
-    float averageGain;
+    void setVoiceHarmonics();
+    void setVoiceADSR(float att, float dec, float sus, float rel);
 
 private:
     // variables
     float nyquist = fs / 2.f;
+    vector<int> currentPlayingNotes; 
     vector<float> currentAngle;
     vector<float> angleChange;
+
+    vector<SynthVoice> synthVoices;
+    int currentNoteIndex = 0;
 
     // methods
     float limit(float min, float max, float n);

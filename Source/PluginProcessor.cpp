@@ -95,24 +95,22 @@ void AdditiveSynthPluginAudioProcessor::prepareToPlay(double sampleRate, int sam
 {
     fs = sampleRate;
     nyquist = fs / 2.f;
+    gainVector.clear();
+    currentPlayingNotes.clear();
+    synthVoices.clear();
 
-    // initialize all vectors:
-    gain.clear();
-    currentAngle.clear();
-    angleChange.clear();
-
-    for (int h = 0; h < nHarmonics; h++)
+    for (int h = 0; h < numHarmonics; h++)
     {
-        gain.push_back(0.f);
-        currentAngle.push_back(0.f);
-        angleChange.push_back(f0 * static_cast<float>(h + 1) * 2.f * double_Pi * (1.f / fs));
+        gainVector.push_back(0.f);
     }
+    gainVector[0] = 1.f;
 
-    gain[0] = 1.f;
-    adsr.setSampleRate(fs);
-    adsr.setParameters({ 0.5f,0.5f,1.0f,0.5f });
-
-    averageGain = computeAverageGain(gain, nHarmonics);
+    synthVoices.assign(numVoices, SynthVoice());
+    for (int i = 0; i < numVoices; i++)
+    {
+        currentPlayingNotes.push_back(0);
+        synthVoices[i].setup(sampleRate, numHarmonics);
+    }
 }
 
 void AdditiveSynthPluginAudioProcessor::releaseResources()
@@ -166,16 +164,23 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
     {
         if (currentMessage.isNoteOn())
         {
-            adsr.noteOn();
+            
             f0 = currentMessage.getMidiNoteInHertz(currentMessage.getNoteNumber(), 440);
-            for (int h = 0; h < nHarmonics; h++)
-            {
-                setAngleChange();
-            }
+            currentPlayingNotes[currentNoteIndex] = currentMessage.getNoteNumber();
+            synthVoices[currentNoteIndex].noteOn(f0);
+            currentNoteIndex++;
+            if (currentNoteIndex >= numVoices)currentNoteIndex = 0;
         }
         else if (currentMessage.isNoteOff())
         {
-            adsr.noteOff();
+            for (int i = 0; i < numVoices; i++)
+            {
+                if (currentMessage.getNoteNumber() == currentPlayingNotes[i])
+                {
+                    synthVoices[i].noteOff();
+                }
+            }
+            
         }
     }
 
@@ -186,21 +191,12 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
 
         float x = 0.f;
 
-        for (int h = 0; h < nHarmonics; h++)
+        for (int i = 0; i < numVoices; i++)
         {
-            if (f0 * static_cast<float>(h + 1) < nyquist)
-            {
-                x = x + adsr.getNextSample() * gain[h] * sin(currentAngle[h]);
-            }
-            currentAngle[h] += angleChange[h];
-            if (currentAngle[h] > 2.f * double_Pi)
-            {
-                currentAngle[h] -= 2.f * double_Pi;
-            }
-
+            x = x + synthVoices[i].getNextSample();
         }
-
-        x = volume * averageGain * x;
+        
+        x = volume * (1.f / numVoices) * x;
         x = limit(-1.f, 1.f, x);
         outL[n] = x;
         outR[n] = x;
@@ -246,24 +242,15 @@ float AdditiveSynthPluginAudioProcessor::limit(float min, float max, float n)
     else return n;
 }
 
-float AdditiveSynthPluginAudioProcessor::computeAverageGain(vector<float> gainList, float numberOfHarmonics)
+
+void AdditiveSynthPluginAudioProcessor::setVoiceHarmonics()
 {
-    float totalGain = 0.f;
-    for (int h = 0; h < numberOfHarmonics; h++)
-    {
-        if (f0 * static_cast<float>(h + 1) < nyquist) // only count audible frequencies
-        {
-            totalGain = totalGain + gainList[h];
-        }
-    }
-    return 1.f / totalGain;
+    for (int i = 0; i < numVoices; i++)
+    synthVoices[i].setHarmonicGain(gainVector);
 }
 
-
-void AdditiveSynthPluginAudioProcessor::setAngleChange()
+void AdditiveSynthPluginAudioProcessor::setVoiceADSR(float  att, float dec, float sus, float rel)
 {
-    for (int h = 0; h < nHarmonics; h++)
-    {
-        angleChange[h] = 2.f * double_Pi * f0 * static_cast<float>(h + 1) * powf(2.f, cent / 1200) * (1.f / fs);
-    }
+    for (int i = 0; i < numVoices; i++)
+    synthVoices[i].setADSRParams({att,dec,sus,rel});
 }
