@@ -9,6 +9,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+
+
 //==============================================================================
 AdditiveSynthPluginAudioProcessor::AdditiveSynthPluginAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -22,6 +24,72 @@ AdditiveSynthPluginAudioProcessor::AdditiveSynthPluginAudioProcessor()
     )
 #endif
 {
+
+#ifdef NOEDITOR
+    addParameter(volume = new AudioParameterFloat("volume", // parameter ID
+        "Volume", // parameter name
+        0.0f,   // minimum value
+        1.0f,   // maximum value
+        1.0f)); // default value
+    addParameter(modulation = new AudioParameterFloat("modulation", // parameter ID
+        "Modulation", // parameter name
+        -6.0f,   // minimum value
+        6.0f,   // maximum value
+        0.0f)); // default value
+    addParameter(fundamentalFreq = new AudioParameterFloat("fundamentalFreq", // parameter ID
+        "FundamentalFreq", // parameter name
+        20.0f,   // minimum value
+        20000.0f,   // maximum value
+        440.0f)); // default value
+    addParameter(attack = new AudioParameterFloat("attack", // parameter ID
+        "Attack", // parameter name
+        0.0f,   // minimum value
+        25.0f,   // maximum value
+        0.5f)); // default value
+    addParameter(decay = new AudioParameterFloat("decay", // parameter ID
+        "Decay", // parameter name
+        0.0f,   // minimum value
+        25.0f,   // maximum value
+        0.5f)); // default value
+    addParameter(sustain = new AudioParameterFloat("sustain", // parameter ID
+        "Sustain", // parameter name
+        0.0f,   // minimum value
+        1.0f,   // maximum value
+        1.0f)); // default value
+    addParameter(release = new AudioParameterFloat("release", // parameter ID
+        "Release", // parameter name
+        0.0f,   // minimum value
+        25.0f,   // maximum value
+        0.5f)); // default value
+
+    addParameter(noteOn = new AudioParameterBool("noteOn", // parameter ID
+        "NoteOn", // parameter name
+        false   // default value
+        )); // default value
+
+    addParameter(noteOff = new AudioParameterBool("noteOff", // parameter ID
+        "NoteOff", // parameter name
+        false   // default value
+        )); // default value
+
+    addParameter(harmonicsChanged = new AudioParameterBool("harmonicChanged", // parameter ID
+        "harmonic Changed", // parameter name
+        false   // default value
+    )); // default value
+
+    // create gain parameter for each harmonic
+    gains.reserve(numHarmonics); 
+    for (int h = 0; h < numHarmonics; h++)
+    {
+        gains.push_back(new AudioParameterFloat("gain" + to_string(h), // parameter ID
+            "Gain" + to_string(h), // parameter name
+            0.0f,                  // minimum value
+            1.0f,                  // maximum value
+            0.1f));
+
+        addParameter(gains[h]);
+    }
+#endif
 }
 
 AdditiveSynthPluginAudioProcessor::~AdditiveSynthPluginAudioProcessor()
@@ -155,6 +223,7 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
+
     // MIDI Input
     MidiBuffer::Iterator it(midiMessages);
     MidiMessage currentMessage;
@@ -184,6 +253,53 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
         }
     }
 
+    #ifdef NOEDITOR     
+        if (vol != *volume)vol = *volume;
+        if (cent != *modulation)cent = *modulation;
+        if (f0 != *fundamentalFreq)f0 = *fundamentalFreq;
+        if (att != *attack || dec != *decay || sus != *sustain || rel != *release)
+        {
+            att = *attack;
+            dec = *decay;
+            sus = *sustain;
+            rel = *release;
+            for (int i = 0; i < numVoices; i++)  synthVoices[i].setADSRParams({ att,dec,sus,rel });
+        }
+
+        if (*harmonicsChanged)
+        {
+            for (int h = 0; h < numHarmonics; h++) gainVector[h] = *gains[h];
+            
+            for (int i = 0; i < numVoices; i++) synthVoices[i].setHarmonicGain(gainVector);
+            
+            *harmonicsChanged = false; 
+        }
+
+        // Note on and off
+        if (*noteOn)
+        {
+            currentPlayingNotes[currentNoteIndex] = f0;
+            synthVoices[currentNoteIndex].noteOn(f0);
+            currentNoteIndex++;
+            if (currentNoteIndex >= numVoices)currentNoteIndex = 0;
+           *noteOn = false; 
+        }
+
+        if (*noteOff) // noteOff if the frequency of the noteOff mathces one of the currently playing frequencies
+        {
+            for (int i = 0; i < numVoices; i++)
+            {
+                if (f0 == currentPlayingNotes[i])
+                {
+                    synthVoices[i].noteOff();
+                }
+            }
+            *noteOff = false;
+        }
+
+    #endif
+
+
     for (int n = 0; n < buffer.getNumSamples(); ++n)
     {
         auto outL = buffer.getWritePointer(0);
@@ -196,7 +312,7 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
             x = x + synthVoices[i].getNextSample();
         }
         
-        x = volume * (1.f / numVoices) * x;
+        x = vol * (1.f / numVoices) * x;
         x = limit(-1.f, 1.f, x);
         outL[n] = x;
         outR[n] = x;
@@ -206,7 +322,11 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
 //==============================================================================
 bool AdditiveSynthPluginAudioProcessor::hasEditor() const
 {
-    return true; // (change this to false if you choose to not supply an editor)
+    #ifdef NOEDITOR
+        return false;
+    #else
+        return true;
+    #endif
 }
 
 juce::AudioProcessorEditor* AdditiveSynthPluginAudioProcessor::createEditor()

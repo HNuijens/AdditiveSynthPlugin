@@ -14,6 +14,9 @@
 #include "SynthVoice.h"
 using namespace std;
 
+
+#define NOEDITOR // Uncomment this if the plugin is a Unity plugin
+
 //==============================================================================
 /**
 */
@@ -62,28 +65,41 @@ public:
 
     vector<double> gainVector;
 
-    float g = 1.f;
-    float volume = 0.5f;
+    float vol = 0.5f; // volume
     int numHarmonics = 16;
     int numVoices = 6; 
     float cent = 0.f;
-
+    
     void setVoiceHarmonics();
     void setVoiceADSR(float att, float dec, float sus, float rel);
-
+    float att = 0.5f, dec = 0.5f, sus = 1.0f, rel = 0.5f;
 private:
     // variables
     float nyquist = fs / 2.f;
-    vector<int> currentPlayingNotes; 
-    vector<float> currentAngle;
-    vector<float> angleChange;
 
-    vector<SynthVoice> synthVoices;
+    vector<double> currentPlayingNotes;     
     int currentNoteIndex = 0;
+    vector<SynthVoice> synthVoices;
+
+    #ifdef NOEDITOR 
+        // Exposed parameters for Unity
+        AudioParameterFloat* volume;
+        AudioParameterFloat* modulation;
+        AudioParameterFloat* fundamentalFreq;
+        AudioParameterFloat* attack;
+        AudioParameterFloat* decay;
+        AudioParameterFloat* sustain;
+        AudioParameterFloat* release;
+        AudioParameterBool* noteOn;
+        AudioParameterBool* noteOff;
+        AudioParameterBool* harmonicsChanged;
+        vector<AudioParameterFloat*> gains;
+
+    #endif
 
     // methods
     float limit(float min, float max, float n);
-
+   
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AdditiveSynthPluginAudioProcessor)

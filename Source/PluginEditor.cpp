@@ -176,21 +176,25 @@ void AdditiveSynthPluginAudioProcessorEditor::sliderValueChanged(Slider* slider)
     if (slider == ADSRSliders[0])
     {
         attack = ADSRSliders[0]->getValue();
+        audioProcessor.att = attack; 
     }
 
     if (slider == ADSRSliders[1])
     {
         decay = ADSRSliders[1]->getValue();
+        audioProcessor.dec = decay;
     }
 
     if (slider == ADSRSliders[2])
     {
         sustain = ADSRSliders[2]->getValue();
+        audioProcessor.sus = sustain;
     }
 
     if (slider == ADSRSliders[3])
     {
         release = ADSRSliders[3]->getValue();
+        audioProcessor.rel = release;
     }
 
     if (slider == ADSRSliders[0] || slider == ADSRSliders[1] || slider == ADSRSliders[2] || slider == ADSRSliders[3])
@@ -200,7 +204,7 @@ void AdditiveSynthPluginAudioProcessorEditor::sliderValueChanged(Slider* slider)
 
     if (slider == &volumeSlider)
     {
-        audioProcessor.volume = volumeSlider.getValue();
+        audioProcessor.vol = volumeSlider.getValue();
     }
 
     if (slider == &modSlider)
