@@ -77,7 +77,9 @@ private:
     // variables
     float nyquist = fs / 2.f;
 
-    vector<double> currentPlayingNotes;     
+    vector<double> currentPlayingNotes;    
+    int currentPreset = 1;
+
     int currentNoteIndex = 0;
     vector<SynthVoice> synthVoices;
 
@@ -93,12 +95,16 @@ private:
         AudioParameterBool* noteOn;
         AudioParameterBool* noteOff;
         AudioParameterBool* harmonicsChanged;
-        vector<AudioParameterFloat*> gains;
+        AudioParameterInt* preset;
+        //vector<AudioParameterFloat*> gains;
 
     #endif
 
     // methods
     float limit(float min, float max, float n);
+
+    void ChangePreset();
+    bool isOdd(int value) { return value % 2 != 0; };
    
 
     //==============================================================================

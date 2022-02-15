@@ -77,18 +77,24 @@ AdditiveSynthPluginAudioProcessor::AdditiveSynthPluginAudioProcessor()
         false   // default value
     )); // default value
 
-    // create gain parameter for each harmonic
-    gains.reserve(numHarmonics); 
-    for (int h = 0; h < numHarmonics; h++)
-    {
-        gains.push_back(new AudioParameterFloat("gain" + to_string(h), // parameter ID
-            "Gain" + to_string(h), // parameter name
-            0.0f,                  // minimum value
-            1.0f,                  // maximum value
-            0.1f));
+    addParameter(preset = new AudioParameterInt("preset", // parameter ID
+        "Preset", // parameter name
+        1,   // minimum value
+        4,   // maximum value
+        1)); // default value
 
-        addParameter(gains[h]);
-    }
+    // create gain parameter for each harmonic
+    //gains.reserve(numHarmonics); 
+    //for (int h = 0; h < numHarmonics; h++)
+    //{
+    //    gains.push_back(new AudioParameterFloat("gain" + to_string(h), // parameter ID
+    //        "Gain" + to_string(h), // parameter name
+    //        0.0f,                  // minimum value
+    //        1.0f,                  // maximum value
+    //        0.1f));
+
+    //    addParameter(gains[h]);
+    //}
 #endif
 }
 
@@ -275,13 +281,19 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
             for (int i = 0; i < numVoices; i++)  synthVoices[i].setADSRParams({ att,dec,sus,rel });
         }
 
-        if (*harmonicsChanged)
+        //if (*harmonicsChanged)
+        //{
+        //    /*for (int h = 0; h < numHarmonics; h++) gainVector[h] = *gains[h];
+        //    
+        //    for (int i = 0; i < numVoices; i++) synthVoices[i].setHarmonicGain(gainVector);
+        //    
+        //    *harmonicsChanged = false; */
+        //}
+
+        if (currentPreset != *preset)
         {
-            for (int h = 0; h < numHarmonics; h++) gainVector[h] = *gains[h];
-            
-            for (int i = 0; i < numVoices; i++) synthVoices[i].setHarmonicGain(gainVector);
-            
-            *harmonicsChanged = false; 
+            currentPreset = *preset;
+            ChangePreset();
         }
 
         // Note on and off
@@ -398,4 +410,63 @@ void AdditiveSynthPluginAudioProcessor::setVoiceADSR(float  att, float dec, floa
 {
     for (int i = 0; i < numVoices; i++)
     synthVoices[i].setADSRParams({att,dec,sus,rel});
+}
+
+void AdditiveSynthPluginAudioProcessor::ChangePreset()
+{
+    switch (currentPreset)
+    {
+    // Sine wave
+    case 1:
+       
+        for (int h = 0; h < numHarmonics; h++)
+        {
+            gainVector[h] = 0;
+        }
+        gainVector[0] = 1.f;
+
+        for (int i = 0; i < numVoices; i++)
+            synthVoices[i].setHarmonicGain(gainVector);
+        break;
+
+    // Triangle wave
+    case 2:
+
+        for (int h = 0; h < numHarmonics; h++)
+        {
+            if (isOdd(h))
+                gainVector[h] = 1.0 / (h * h);
+            else gainVector[h] = 0.f;
+        }
+
+        for (int i = 0; i < numVoices; i++)
+            synthVoices[i].setHarmonicGain(gainVector);
+        break;
+        
+    // Saw wave
+    case 3:
+        
+        for (int h = 0; h < numHarmonics; h++)
+        {
+            gainVector[h] = 1.0 / (h + 1.0);
+        }
+
+        for (int i = 0; i < numVoices; i++)
+            synthVoices[i].setHarmonicGain(gainVector);
+        break;
+
+    // Square wave
+    case 4:
+
+        for (int h = 0; h < numHarmonics; h++)
+        {
+            if (isOdd(h))
+                gainVector[h] = 1.0 / (h + 1.0);
+            else gainVector[h] = 0.f;
+        }
+
+        for (int i = 0; i < numVoices; i++)
+            synthVoices[i].setHarmonicGain(gainVector);
+        break;
+    }
 }
