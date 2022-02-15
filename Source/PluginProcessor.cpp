@@ -33,8 +33,8 @@ AdditiveSynthPluginAudioProcessor::AdditiveSynthPluginAudioProcessor()
         1.0f)); // default value
     addParameter(modulation = new AudioParameterFloat("modulation", // parameter ID
         "Modulation", // parameter name
-        -6.0f,   // minimum value
-        6.0f,   // maximum value
+        -12.0f,   // minimum value
+        12.0f,   // maximum value
         0.0f)); // default value
     addParameter(fundamentalFreq = new AudioParameterFloat("fundamentalFreq", // parameter ID
         "FundamentalFreq", // parameter name
@@ -224,6 +224,7 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
         buffer.clear(i, 0, buffer.getNumSamples());
 
 
+#ifndef NOEDITOR 
     // MIDI Input
     MidiBuffer::Iterator it(midiMessages);
     MidiMessage currentMessage;
@@ -252,10 +253,18 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
             
         }
     }
-
+#endif
     #ifdef NOEDITOR     
         if (vol != *volume)vol = *volume;
-        if (cent != *modulation)cent = *modulation;
+        if (cent != *modulation)
+        {
+            cent = *modulation * 100.0;
+            for (int i = 0; i < numVoices; i++)
+            {
+                synthVoices[i].cent = cent;
+                synthVoices[i].setAngleChange();
+            }
+        }
         if (f0 != *fundamentalFreq)f0 = *fundamentalFreq;
         if (att != *attack || dec != *decay || sus != *sustain || rel != *release)
         {
@@ -278,10 +287,26 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
         // Note on and off
         if (*noteOn)
         {
-            currentPlayingNotes[currentNoteIndex] = f0;
-            synthVoices[currentNoteIndex].noteOn(f0);
-            currentNoteIndex++;
-            if (currentNoteIndex >= numVoices)currentNoteIndex = 0;
+            // check if one of the voices is already on
+            bool noteExists = false; 
+            for (int i = 0; i < numVoices; i++)
+            {
+                if (f0 == synthVoices[i].f0)
+                {
+                    synthVoices[i].noteOn(f0);
+                    noteExists = true; 
+                    currentNoteIndex = i; 
+                }
+            }
+
+            if (!noteExists)
+            {
+                currentNoteIndex++;
+                if (currentNoteIndex >= numVoices)currentNoteIndex = 0;
+                synthVoices[currentNoteIndex].noteOn(f0);
+
+            }
+
            *noteOn = false; 
         }
 
@@ -289,7 +314,7 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
         {
             for (int i = 0; i < numVoices; i++)
             {
-                if (f0 == currentPlayingNotes[i])
+                if (f0 == synthVoices[i].f0)
                 {
                     synthVoices[i].noteOff();
                 }

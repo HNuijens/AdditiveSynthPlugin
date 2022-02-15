@@ -31,16 +31,16 @@ public:
     void setADSRParams(ADSR::Parameters params);
     void noteOn(double f0);
     void noteOff();
-
+    void setAngleChange();          // changing the angular speed
     
-
+    double cent = 0;                
     double f0 = 220; 
 
 
 private:
 
     void computeAverageGain();      // changing the gain when harmonics are altered
-    void setAngleChange();          // changing the angular speed
+   
 
     vector<double> gainVector;      // list containing gain for each harmonic
     vector<double> currentAngle;     // current angle of all harmonics
@@ -53,7 +53,7 @@ private:
     double nyquist = Fs / 2.f;      // fundam
     double averagedGain;            // average out all sinusoids
 
-    double cent = 0;                // 
+    
     int numHarmonics;               // number of harmonics
 
 };

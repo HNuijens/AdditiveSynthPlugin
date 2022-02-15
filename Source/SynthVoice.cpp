@@ -108,6 +108,6 @@ void SynthVoice::setAngleChange()
 {
     for (int h = 0; h < numHarmonics; h++)
     {
-        angleChange[h] = 2.f * double_Pi * f0 * (h + 1) * powf(2.f, cent / 1200) * (1.f / Fs);
+        angleChange[h] = 2.f * double_Pi * f0 * (h + 1) * powf(2.f, cent / 1200.0) * (1.f / Fs);
     }
 }

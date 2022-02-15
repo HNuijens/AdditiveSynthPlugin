@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="FsabSR" name="AdditiveSynthPlugin" projectType="audioplug"
-              displaySplashScreen="1" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
+              displaySplashScreen="1" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
+              pluginFormats="buildAU,buildStandalone,buildUnity,buildVST3">
   <MAINGROUP id="bT9835" name="AdditiveSynthPlugin">
     <GROUP id="{F1B386BA-6191-E5A2-09E2-356471B09EBA}" name="Source">
       <FILE id="Z2VHvC" name="SynthVoice.cpp" compile="1" resource="0" file="Source/SynthVoice.cpp"/>
