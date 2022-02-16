@@ -61,40 +61,28 @@ AdditiveSynthPluginAudioProcessor::AdditiveSynthPluginAudioProcessor()
         0.0f,   // minimum value
         25.0f,   // maximum value
         0.5f)); // default value
-
-    addParameter(noteOn = new AudioParameterBool("noteOn", // parameter ID
-        "NoteOn", // parameter name
+    addParameter(voiceIsAdded = new AudioParameterBool("voiceIsAdded", // parameter ID
+        "Voice is Added", // parameter name
         false   // default value
         )); // default value
-
-    addParameter(noteOff = new AudioParameterBool("noteOff", // parameter ID
-        "NoteOff", // parameter name
-        false   // default value
-        )); // default value
-
-    addParameter(harmonicsChanged = new AudioParameterBool("harmonicChanged", // parameter ID
-        "harmonic Changed", // parameter name
+    addParameter(resetVoices = new AudioParameterBool("resetVoices", // parameter ID
+        "Reset Voices", // parameter name
         false   // default value
     )); // default value
-
     addParameter(preset = new AudioParameterInt("preset", // parameter ID
         "Preset", // parameter name
         1,   // minimum value
         4,   // maximum value
         1)); // default value
+    noteOnOff.reserve(numVoices); 
+    for (int h = 0; h < numVoices; h++)
+    {
+        noteOnOff.push_back(new AudioParameterBool("noteOnOff" + to_string(h), // parameter ID
+            "NoteOnOff" + to_string(h), // parameter name
+            false));
 
-    // create gain parameter for each harmonic
-    //gains.reserve(numHarmonics); 
-    //for (int h = 0; h < numHarmonics; h++)
-    //{
-    //    gains.push_back(new AudioParameterFloat("gain" + to_string(h), // parameter ID
-    //        "Gain" + to_string(h), // parameter name
-    //        0.0f,                  // minimum value
-    //        1.0f,                  // maximum value
-    //        0.1f));
-
-    //    addParameter(gains[h]);
-    //}
+        addParameter(noteOnOff[h]);
+    }
 #endif
 }
 
@@ -182,6 +170,7 @@ void AdditiveSynthPluginAudioProcessor::prepareToPlay(double sampleRate, int sam
     synthVoices.assign(numVoices, SynthVoice());
     for (int i = 0; i < numVoices; i++)
     {
+        isPlaying.push_back(false);
         currentPlayingNotes.push_back(0);
         synthVoices[i].setup(sampleRate, numHarmonics);
     }
@@ -264,6 +253,7 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
         if (vol != *volume)vol = *volume;
         if (cent != *modulation)
         {
+            // Check modulation ocne every buffer to allow smooth frequency changes
             cent = *modulation * 100.0;
             for (int i = 0; i < numVoices; i++)
             {
@@ -271,9 +261,9 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
                 synthVoices[i].setAngleChange();
             }
         }
-        if (f0 != *fundamentalFreq)f0 = *fundamentalFreq;
         if (att != *attack || dec != *decay || sus != *sustain || rel != *release)
         {
+            // Envelope changed
             att = *attack;
             dec = *decay;
             sus = *sustain;
@@ -281,61 +271,49 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
             for (int i = 0; i < numVoices; i++)  synthVoices[i].setADSRParams({ att,dec,sus,rel });
         }
 
-        //if (*harmonicsChanged)
-        //{
-        //    /*for (int h = 0; h < numHarmonics; h++) gainVector[h] = *gains[h];
-        //    
-        //    for (int i = 0; i < numVoices; i++) synthVoices[i].setHarmonicGain(gainVector);
-        //    
-        //    *harmonicsChanged = false; */
-        //}
-
         if (currentPreset != *preset)
         {
+            // Preset is changed
             currentPreset = *preset;
             ChangePreset();
         }
 
-        // Note on and off
-        if (*noteOn)
+        for (int i = 0; i < numVoices; i++)
         {
-            // check if one of the voices is already on
-            bool noteExists = false; 
-            for (int i = 0; i < numVoices; i++)
+            // Check note on and off
+            if (*noteOnOff[i] && !isPlaying[i])
             {
-                if (f0 == synthVoices[i].f0)
-                {
-                    synthVoices[i].noteOn(f0);
-                    noteExists = true; 
-                    currentNoteIndex = i; 
-                }
+                synthVoices[i].noteOn();
+                isPlaying[i] = true; 
             }
 
-            if (!noteExists)
+            if (!*noteOnOff[i] && isPlaying[i])
             {
-                currentNoteIndex++;
-                if (currentNoteIndex >= numVoices)currentNoteIndex = 0;
-                synthVoices[currentNoteIndex].noteOn(f0);
-
+                synthVoices[i].noteOff();
+                isPlaying[i] = false;
             }
-
-           *noteOn = false; 
         }
 
-        if (*noteOff) // noteOff if the frequency of the noteOff mathces one of the currently playing frequencies
+        if (*voiceIsAdded)
         {
-            for (int i = 0; i < numVoices; i++)
-            {
-                if (f0 == synthVoices[i].f0)
-                {
-                    synthVoices[i].noteOff();
-                }
-            }
-            *noteOff = false;
+            // Voice is added. change the frequency of that voice
+            if (currentVoiceIndex != 0 && activeVoices <= numVoices)activeVoices++;
+            f0 = *fundamentalFreq;                          // change f0 to current frequency
+            synthVoices[currentVoiceIndex].setF0(f0);
+            currentVoiceIndex++;
+            if (currentVoiceIndex >= numVoices)currentVoiceIndex = 0;
+            *voiceIsAdded = false; 
+        }
+
+        if (*resetVoices)
+        {
+            // Reset at script start in Unity
+            activeVoices = 1;
+            currentVoiceIndex = 0; 
+            *resetVoices = false;
         }
 
     #endif
-
 
     for (int n = 0; n < buffer.getNumSamples(); ++n)
     {
@@ -346,10 +324,13 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
 
         for (int i = 0; i < numVoices; i++)
         {
-            x = x + synthVoices[i].getNextSample();
+            if (synthVoices[i].adsr.isActive())
+            {
+                x = x + synthVoices[i].getNextSample();
+            }
         }
         
-        x = vol * (1.f / numVoices) * x;
+        x = vol * (1.f / static_cast<float>(activeVoices)) * x;
         x = limit(-1.f, 1.f, x);
         outL[n] = x;
         outR[n] = x;

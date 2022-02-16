@@ -63,8 +63,7 @@ double SynthVoice::getNextSample()
             currentAngle[h] -= 2.f * double_Pi;
         }
     }
-
-    return out * averagedGain; 
+    return out * averagedGain;
 }
 
 void SynthVoice::setHarmonicGain(vector<double>gainVector)
@@ -92,10 +91,13 @@ void SynthVoice::setADSRParams(ADSR::Parameters params)
     adsr.setParameters(params);
 }
 
-void SynthVoice::noteOn(double f0)
+void SynthVoice::setF0(double f0)
 {
-    this->f0 = f0;
+    this->f0 = f0; 
     setAngleChange();
+}
+void SynthVoice::noteOn()
+{
     adsr.noteOn();
 }
 

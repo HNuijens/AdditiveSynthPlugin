@@ -76,14 +76,14 @@ public:
 private:
     // variables
     float nyquist = fs / 2.f;
-
+    
     vector<double> currentPlayingNotes;    
     int currentPreset = 1;
 
-    int currentNoteIndex = 0;
+    int currentVoiceIndex = 0;
     vector<SynthVoice> synthVoices;
 
-    #ifdef NOEDITOR 
+#ifdef NOEDITOR 
         // Exposed parameters for Unity
         AudioParameterFloat* volume;
         AudioParameterFloat* modulation;
@@ -92,13 +92,19 @@ private:
         AudioParameterFloat* decay;
         AudioParameterFloat* sustain;
         AudioParameterFloat* release;
-        AudioParameterBool* noteOn;
-        AudioParameterBool* noteOff;
-        AudioParameterBool* harmonicsChanged;
+        AudioParameterBool* resetVoices;
         AudioParameterInt* preset;
-        //vector<AudioParameterFloat*> gains;
+        vector<AudioParameterBool*> noteOnOff; 
+        AudioParameterBool* voiceIsAdded; 
 
-    #endif
+        int activeVoices = 1;
+        vector<bool> isPlaying;
+#endif
+
+#ifndef NOEDITOR
+        // When playing midi 
+        int activeVoices = numVoices;
+#endif
 
     // methods
     float limit(float min, float max, float n);
