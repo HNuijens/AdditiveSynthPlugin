@@ -170,7 +170,9 @@ void AdditiveSynthPluginAudioProcessor::prepareToPlay(double sampleRate, int sam
     synthVoices.assign(numVoices, SynthVoice());
     for (int i = 0; i < numVoices; i++)
     {
+#ifdef NOEDITOR
         isPlaying.push_back(false);
+#endif
         currentPlayingNotes.push_back(0);
         synthVoices[i].setup(sampleRate, numHarmonics);
     }
@@ -229,12 +231,12 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
     {
         if (currentMessage.isNoteOn())
         {
-            
             f0 = currentMessage.getMidiNoteInHertz(currentMessage.getNoteNumber(), 440);
-            currentPlayingNotes[currentNoteIndex] = currentMessage.getNoteNumber();
-            synthVoices[currentNoteIndex].noteOn(f0);
-            currentNoteIndex++;
-            if (currentNoteIndex >= numVoices)currentNoteIndex = 0;
+            currentPlayingNotes[currentVoiceIndex] = currentMessage.getNoteNumber();
+            synthVoices[currentVoiceIndex].setF0(f0);
+            synthVoices[currentVoiceIndex].noteOn();
+            currentVoiceIndex++;
+            if (currentVoiceIndex >= numVoices)currentVoiceIndex = 0;
         }
         else if (currentMessage.isNoteOff())
         {
@@ -248,7 +250,15 @@ void AdditiveSynthPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& b
             
         }
     }
+
+    for (int i = 0; i < numVoices; i++)
+    {
+        synthVoices[i].cent = cent;
+        synthVoices[i].setAngleChange();
+    }
+
 #endif
+
     #ifdef NOEDITOR     
         if (vol != *volume)vol = *volume;
         if (cent != *modulation)
