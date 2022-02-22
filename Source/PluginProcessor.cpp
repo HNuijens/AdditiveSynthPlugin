@@ -33,8 +33,8 @@ AdditiveSynthPluginAudioProcessor::AdditiveSynthPluginAudioProcessor()
         1.0f)); // default value
     addParameter(modulation = new AudioParameterFloat("modulation", // parameter ID
         "Modulation", // parameter name
-        -12.0f,   // minimum value
-        12.0f,   // maximum value
+        -24.0f,   // minimum value
+        24.0f,   // maximum value
         0.0f)); // default value
     addParameter(fundamentalFreq = new AudioParameterFloat("fundamentalFreq", // parameter ID
         "FundamentalFreq", // parameter name
